@@ -1,0 +1,168 @@
+#fraction_votes
+#Rubio
+# =========================================================================
+rubio <- primary2 %>%
+  filter(candidate == "Marco Rubio")
+
+rubio <- inner_join( rubio, demographics2, by = c("state_abbreviation","county"))
+
+rubio$income <- rubio$income/1000
+rubio$fraction_votes <- rubio$fraction_votes *100 #normalize a bit
+
+
+g1 <- qplot(x = income, y = fraction_votes, data = rubio, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g2 <- qplot(x = college, y = fraction_votes, data = rubio, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g3 <- qplot(x = white, y = fraction_votes, data = rubio, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g4 <- qplot(x = density, y = fraction_votes, data = rubio, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+grid.arrange(g1, g2, g3, g4, nrow =2, ncol = 2)
+
+
+#trump fraction_votes
+# =========================================================================
+trump <- primary %>%
+  filter(candidate == "Donald Trump")
+
+trump <- inner_join( trump, demographics, by = c("state_abbreviation","county"))
+
+trump$income <- trump$income/1000
+trump$fraction_votes <- trump$fraction_votes *100 #normalize a bit
+
+
+g1 <- qplot(x = income, y = fraction_votes, data = trump, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g2 <- qplot(x = college, y = fraction_votes, data = trump, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g3 <- qplot(x = white, y = fraction_votes, data = trump, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g4 <- qplot(x = hispanic, y = fraction_votes, data = trump, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+grid.arrange(g1, g2, g3, g4, nrow =2, ncol = 2)
+#hillary clinton
+# =========================================================================
+hillary <- primary %>%
+  filter(candidate == "Hillary Clinton")
+
+hillary <- inner_join( hillary, demographics, by = c("state_abbreviation","county"))
+
+hillary$income <- hillary$income/1000
+hillary$fraction_votes <- hillary$fraction_votes *100 #normalize a bit
+
+
+g1 <- qplot(x = income, y = fraction_votes, data = hillary, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g2 <- qplot(x = college, y = fraction_votes, data = hillary, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g3 <- qplot(x = white, y = fraction_votes, data = hillary, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g4 <- qplot(x = hispanic, y = fraction_votes, data = hillary, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+grid.arrange(g1, g2, g3, g4, nrow =2, ncol = 2)
+
+#Benrie sanders
+# =========================================================================
+BernieSanders <- primary %>%
+  filter(candidate == "Bernie Sanders")
+
+BernieSanders <- inner_join( BernieSanders, demographics, by = c("state_abbreviation","county"))
+
+BernieSanders$income <- BernieSanders$income/1000
+BernieSanders$fraction_votes <- BernieSanders$fraction_votes *100 #normalize a bit
+
+
+g1 <- qplot(x = income, y = fraction_votes, data = BernieSanders, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g2 <- qplot(x = college, y = fraction_votes, data = BernieSanders, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g3 <- qplot(x = white, y = fraction_votes, data = BernieSanders, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g4 <- qplot(x = hispanic, y = fraction_votes, data = BernieSanders, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+grid.arrange(g1, g2, g3, g4, nrow =2, ncol = 2)
+
+#john
+# =========================================================================
+JohnKasich <- primary %>%
+  filter(candidate == "John Kasich")
+
+JohnKasich <- inner_join( JohnKasich, demographics, by = c("state_abbreviation","county"))
+
+JohnKasich$income <- JohnKasich$income/1000
+JohnKasich$fraction_votes <- JohnKasich$fraction_votes *100 #normalize a bit
+
+
+g1 <- qplot(x = income, y = fraction_votes, data = JohnKasich, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g2 <- qplot(x = college, y = fraction_votes, data = JohnKasich, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g3 <- qplot(x = white, y = fraction_votes, data = JohnKasich, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g4 <- qplot(x = hispanic, y = fraction_votes, data = JohnKasich, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+grid.arrange(g1, g2, g3, g4, nrow =2, ncol = 2)
+
+#cruz
+# =========================================================================
+TedCruz <- primary %>%
+  filter(candidate == "Ted Cruz")
+
+TedCruz <- inner_join( TedCruz, demographics, by = c("state_abbreviation","county"))
+
+TedCruz$income <- TedCruz$income/1000
+TedCruz$fraction_votes <- TedCruz$fraction_votes *100 #normalize a bit
+
+
+g1 <- qplot(x = income, y = fraction_votes, data = TedCruz, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g2 <- qplot(x = college, y = fraction_votes, data = TedCruz, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g3 <- qplot(x = white, y = fraction_votes, data = TedCruz, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+g4 <- qplot(x = hispanic, y = fraction_votes, data = TedCruz, ylab = "fraction of votes") +
+  geom_smooth(method='lm',formula=y~x)
+
+grid.arrange(g1, g2, g3, g4, nrow =2, ncol = 2)
+
+# Regression On data
+# =========================================================================
+summary(lm(fraction_votes ~ college+white+hispanic+income+density, data = trump))
+summary(lm(fraction_votes ~ college+white+hispanic+income+density, data = hillary))
+summary(lm(fraction_votes ~ college+white+hispanic+income+density, data = BernieSanders))
+summary(lm(fraction_votes ~ college+white+hispanic+income+density, data = JohnKasich))
+summary(lm(fraction_votes ~ college+white+hispanic+income+density, data = TedCruz))
+
+#Random Forest Classification
+# =========================================================================
+set.seed(131)
+model <- randomForest(as.factor(winner) ~ income + hispanic + white + college + density+person18+person65, data = votes,importance=TRUE)
+print(model)
+print(importance(model,type = 2)) 
+plot(model, ylim = c(0, 0.7))
+
+
