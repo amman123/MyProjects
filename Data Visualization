@@ -1,0 +1,127 @@
+#Aggregation and Visualization
+
+#states by vote percentage
+# =========================================================================
+primary_results <- read.csv(file.choose(),header = T,stringsAsFactors = FALSE)
+
+library(dplyr)
+library(ggplot2)
+install.packages("viridis")
+library(viridis)
+install.packages("ggthemes")
+library(ggthemes)
+install.packages("wesanderson")
+library(wesanderson)
+
+sumStates <- sum(primary_results$votes)
+
+primary_results <- primary_results %>%
+  group_by(state_abbreviation)%>%
+  summarise(count=sum(votes))%>%
+  mutate(stateRatio = count / sumStates * 100)
+
+cb <- ggplot(primary_results, aes(x = state_abbreviation, y = stateRatio, fill = state_abbreviation))+
+  geom_bar(stat="identity") +
+  scale_fill_viridis(discrete = T, option = "plasma") +
+  theme_solarized_2()
+
+png(file="StatesbyVotes3.png", width=1000, height=1000)
+cb + coord_polar(theta="x") +
+  ggtitle("States by the Votes Percentage") +
+  xlab("State Abbreviation") +
+  ylab("Votes Percentage") +
+  guides(fill = guide_legend(title="List of States"))
+
+#Votes for Trump vs Clinton
+# =========================================================================
+library(ggplot2)
+library(scales)
+library(readr)
+install.packages("tidyr")
+library(tidyr)
+library(plotly)
+
+primaries <- read.csv(file.choose(), header = T)
+primaries <- spread(primaries[c("state", "county", "candidate", "fraction_votes")], candidate, fraction_votes)
+
+names(primaries) <- gsub("\\s", "", names(primaries))
+
+
+ggplotly(qplot(x =HillaryClinton  , y = DonaldTrump, data = primaries, 
+               color = state, label=county) +
+           geom_point() +
+           geom_label() +
+           scale_x_continuous(labels = percent) + 
+           scale_y_continuous(labels = percent) + 
+           theme_light(base_size=8)+
+           ggtitle("Votes for trump vs Hillary"))
+
+# votes Benrie vs Cruz
+# =========================================================================
+ggplotly(qplot(x =BernieSanders  , y = TedCruz, data = primaries, 
+               color = state, label=county) +
+           geom_point() +
+           geom_label() +
+           scale_x_continuous(labels = percent) + 
+           scale_y_continuous(labels = percent) + 
+           theme_light(base_size=8)+
+           ggtitle("Votes for Benrie  vs Cruz"))
+
+#Top 5 candidates vote percentage
+# =========================================================================
+primary_results2 <- read.csv(file.choose(),header = T,stringsAsFactors = FALSE)
+
+
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(ggthemes)
+
+sumVotesAll <- sum(primary_results2$votes)
+
+primary_results2 <- primary_results2 %>% 
+  group_by(candidate) %>%
+  summarise(VotesRaw = sum(votes)) %>%
+  mutate(VotesRatio = VotesRaw / sumVotesAll * 100) %>%
+  arrange(desc(VotesRatio))
+
+primary_results2 <- head(primary_results2, n = 5)
+
+png(file="TopCandidates.png", width = 1000, height = 1000)
+ggplot(primary_results2, aes(x = reorder(candidate, VotesRatio), y = VotesRatio, fill = candidate)) + 
+  geom_bar(width = 0.85, stat="identity") +
+  scale_fill_viridis(discrete = T) +
+  coord_polar(theta = "y", start = 0, direction = -1) +
+  ylim(0,25) +
+  theme_solarized_2() +
+  ggtitle("Top 5 Candidates by the Votes Percentage") +
+  xlab("Candidates Sorted by Popularity") +
+  ylab("Votes Percentage") +
+  guides(fill = guide_legend(title="List of Candidates"))
+dev.off() 
+
+#Area Wise data Visualization
+# =========================================================================
+ggplotly(qplot(x =  white, y = college, data = votes3, 
+               color = winner, size = Vote) +
+           ggtitle("Counties by Winner, Whiteness and Educational Attainment"))
+
+
+ggplotly(qplot(x =  white, y = hispanic, data = votes3, 
+               color = winner, size = Vote) +
+           ggtitle("Counties by Winner, Percentage of Whites and Non-Hispanic Whites"))
+
+
+ggplotly(qplot(x =  income, y = college, data = votes3, 
+               color = winner, size = Vote) +
+           ggtitle("Counties by Income, Educational Attainment colored by Winner"))
+
+
+
+ggplotly(qplot(x =  votes, y = density, data = votes3, 
+               color = winner, size = Vote) +
+           ggtitle("Counties by density, Candidate Votes colored by Winner"))
+
+
+
+q()
