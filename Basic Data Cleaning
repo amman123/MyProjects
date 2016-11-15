@@ -1,0 +1,111 @@
+# Subject:Mini Project-Fall semester-2016
+# Team Members:SRINIVASAN A,SRI HARSHA K
+# Title:A System based on data mining technique for analysing and predicting the electoral 
+#poll results
+
+#Load the required packages
+# =========================================================================
+library(dplyr) #do work with the dataframe we use this package
+library(ggplot2)#An implementation of the grammar of graphics in R
+library(plotly)#Easily translate 'ggplot2' graphs to an interactive web-based version and/or create custom
+#web-based visualizations directly from R
+library(grid)#Provides a number of user-
+#level functions to work with ``grid'' graphics, notably to arrange multiple grid-
+#based plots on a page, and draw tables.
+library(gridExtra)
+library(DT)#Data objects in R can be rendered as HTML tables using the
+#JavaScript library 'DataTables' (typically via R Markdown or Shiny). 
+library(GGally)
+library(randomForest)
+library(corrplot)
+#A graphical display of a correlation matrix or general matrix.
+#It also contains some algorithms to do matrix reordering
+
+#second loading packages
+# =========================================================================
+package_names <- c("lubridate","tidyr","Metrics","dplyr")
+
+loadPackage <- function(pkg)
+{
+  if(missing(pkg) || !is.character(pkg))
+  {
+    stop("Package not correctly entered !!!")
+  }
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if(length(new.pkg)) 
+  {
+    install.packages(new.pkg, dependencies = TRUE)
+  }
+  sapply(pkg, require, character.only = TRUE)
+  cat("Packages Loaded !!!")
+}
+suppressPackageStartupMessages(suppressWarnings(loadPackage(package_names)))
+
+#Load the datasets
+# =========================================================================
+primary <- read.csv(file.choose(),header=T, stringsAsFactors = FALSE)
+demographics <- read.csv(file.choose(),header=T, stringsAsFactors=FALSE)
+FPSA <- read.csv(file.choose(),header = T, stringsAsFactors = FALSE)
+PSD <- read.csv(file.choose(),header = T, stringsAsFactors = FALSE)
+VP <- read.csv(file.choose(),header = T, stringsAsFactors = FALSE)
+SPSA <- read.csv(file.choose(),header = T, stringsAsFactors = FALSE)
+Train <- read.csv(file.choose(),header = T, stringsAsFactors = FALSE)
+##wow<-read.csv(file.choose(),header = T, stringsAsFactors = FALSE)
+# Reading the test dataset
+# =========================================================================
+Test <- read.csv(file.choose(),header = T, stringsAsFactors = FALSE)
+
+#Data cleaning Process
+# =========================================================================
+votes <- primary %>%
+  group_by(state_abbreviation, county) %>% 
+  summarize(winner = candidate[which.max(fraction_votes)],
+            Vote = max(fraction_votes),
+            votes = max(votes))
+
+
+demographics %<>%
+  filter(state_abbreviation %in% c("AL","AK","AZ","AR","CA","CO","DE","CT", "FL","GA","ID","IL","IN","KS","IA","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT",
+                                   "NE","NH","NV","NM","NY","NC","ND","OH","OK","OR","PA","SC","SP","TN","TX","UT","VF","VA","WA","WV","WI","WY")) %>% 
+  select(state_abbreviation = state_abbreviation, county = area_name, 
+         income = INC110213, hispanic = RHI725214,
+         white= RHI825214, college = EDU685213, density = POP060210,person18=AGE295214,person65=AGE775214) %>% 
+  mutate(county = gsub(" County", "", county))
+
+
+votes <- inner_join(votes, demographics, by = c("state_abbreviation","county"))
+datatable(votes, class = 'compact')
+
+#Avg county by winner
+votes%>% 
+  group_by(winner) %>% 
+  summarize(round(mean(income)), round(mean(white)), 
+            round(mean(college),1),round(mean(density)),round(mean(hispanic),1),round(sum(votes)),round(mean(person18)),round(mean(person65)))%>%      
+  datatable( colnames = c(" ",  "Winner", "Income", "White (non-Hispanic)", "Colege","Density (pop/sq m)", "Hispanic","votes","person under18(%)","person under65(%)"), class = 'compact', caption = "Average County by Winner")
+
+# Data extraction from existing datasets
+# =================================================================================
+Train <- left_join(Train, VP, by = "Voter_ID")
+Train <- left_join(Train, PSD, by = "Polling_Station_ID")
+Train <- left_join(Train, FPSA, by = c("Voter_ID", "Polling_Station_ID"))
+Train <- left_join(Train, SPSA, by = c("Voter_ID", "Polling_Station_ID"))
+
+Test <- left_join(Test, VP, by = "Voter_ID")
+Test <- left_join(Test, PSD, by = "Polling_Station_ID")
+
+# Dropping variables 
+# =================================================================================
+Train$Category3 <- NULL 
+Test$Category3 <- NULL
+Train$Donation <- NULL
+
+Train$X <- NULL
+Train$Last_Stall_Visited_Number <- NULL
+
+
+# Defining Target variable
+# =================================================================================
+Train$Y <- ifelse((is.na(Train$Voting_Score) & is.na(Train$Voting_Score)),0,1)
+Train$Y[is.na(Train$Y)] <- 0
+
+table(Train$Y)
