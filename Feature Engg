@@ -1,0 +1,264 @@
+# Feature engineering
+# ==================================================================================
+Cleansing <- function(df)
+{
+  if(length(formals(Cleansing)) != nargs())
+  {
+    stop("Check for missing arguments !!!")
+  }
+  if(is.character(df))
+  {
+    df <- eval(parse(text = df))
+  }
+  if(missing(df) | !is.data.frame(df) )
+  {
+    stop("Enter valid data frame !!!")
+  }
+  
+  df$Station_Start_Date <- as.Date(df$Station_Start_Date, format = "%d-%b-%y")
+  df$CSD_Day <- lubridate::day(df$Station_Start_Date)
+  df$CSD_Mon <- lubridate::month(df$Station_Start_Date)
+  df$CSD_Year <- lubridate::year(df$Station_Start_Date)
+  
+  df$Station_End_Date <- as.Date(df$Station_End_Date, format = "%d-%b-%y")
+  df$CED_Day <- lubridate::day(df$Station_End_Date)
+  df$CED_Mon <- lubridate::month(df$Station_End_Date)
+  df$CED_Year <- lubridate::year(df$Station_End_Date)
+  
+  df$Camp_Duration <- difftime(df$Station_End_Date, df$Station_Start_Date, units = c("days"))
+  df$Camp_Duration <- as.numeric(df$Camp_Duration)
+  
+  df$Registration_Date <- as.Date(df$Registration_Date, format = "%d-%b-%y")
+  if(sum(is.na(df$Registration_Date)) > 0){
+    df$Registration_Date[is.na(df$Registration_Date)] <- df$Station_Start_Date[is.na(df$Registration_Date)] + days(round(df$Camp_Duration[is.na(df$Registration_Date)]/2))
+  }
+  df$Reg_Day <- lubridate::day(df$Registration_Date)
+  df$Reg_Mon <- lubridate::month(df$Registration_Date)
+  df$Reg_Year <- lubridate::year(df$Registration_Date)
+  
+  df$Online_Follower <- as.factor(df$Online_Follower)
+  df$LinkedIn_Shared <- as.factor(df$LinkedIn_Shared)
+  df$Twitter_Shared <- as.factor(df$Twitter_Shared)
+  df$Facebook_Shared <- as.factor(df$Facebook_Shared)
+  
+  levels(df$Income)[levels(df$Income) == "None"] <- 7
+  
+  df$Education_Score <- as.character(df$Education_Score)
+  df$Education_Score[df$Education_Score == "None"] <- 0
+  df$Education_Score <- as.numeric(df$Education_Score)
+  df$Education_Score[df$Education_Score == 0] <- median(df$Education_Score[df$Education_Score != 0])
+  
+  df$Age <- as.character(df$Age)
+  df$Age[df$Age == "None"] <- 0
+  df$Age <- as.numeric(df$Age)
+  df$Age[df$Age == 0] <- median(df$Age[df$Age != 0])
+  
+  df$First_Interaction <- as.Date(df$First_Interaction, format = "%d-%b-%y")
+  df$FI_Day <- lubridate::day(df$First_Interaction)
+  df$FI_Mon <- lubridate::month(df$Registration_Date)
+  # df$FI_Year <- year(df$Registration_Date) # Equals to some other variable (Perfect multi-collinearity)
+  
+  levels(df$City_Type) <- c(1:length(levels(df$City_Type)))
+  
+  levels(df$Employer_Category) <- c(1:length(levels(df$Employer_Category)))
+  
+  levels(df$Category1) <- c(1:length(levels(df$Category1)))
+  
+  levels(df$Category2) <- c(1:length(levels(df$Category2)))
+  
+  df$Reg_Year <- factor(df$Reg_Year, levels = c(2003, 2004, 2005, 2006, 2007))
+  
+  df$CSD_Year <- factor(df$CSD_Year, levels = c(2003, 2004, 2005, 2006, 2007))
+  
+  return(df)
+}
+Train <- Cleansing(Train)
+View(Train)
+Test <- Cleansing(Test)
+
+# Recency & Frequency variables
+# ========================================================================
+tab1 <- rbind(Train[, c("Voter_ID", "Registration_Date")], Test[, c("Voter_ID", "Registration_Date")])
+
+tab2 <- as.data.frame(tab1 %>% group_by(Voter_ID) %>% summarise(PRRD = max(Registration_Date)))
+tab2$Recency <- as.integer(difftime(max(Train$Station_End_Date, Test$Station_End_Date), tab2$PRRD, units = "days"))
+tab2$PRRD <- NULL
+
+
+tab3 <- as.data.frame(table(tab1$Voter_ID))
+colnames(tab3) <- c("Voter_ID", "Frequency")
+tab3$Voter_ID <- as.integer(as.character(tab3$Voter_ID))
+
+Train <- left_join(Train, tab2, by = c("Voter_ID"))
+Train <- left_join(Train, tab3, by = c("Voter_ID"))
+Test <- left_join(Test, tab2, by = c("Voter_ID"))
+Test <- left_join(Test, tab3, by = c("Voter_ID"))
+
+Train$Recency <- as.integer(Train$Recency)
+Test$Recency <- as.integer(Test$Recency)
+
+# Time Difference features
+# =================================================================================
+Train$Lag <- as.integer(difftime(Train$Registration_Date, Train$Station_Start_Date, units = "days"))
+Train$Lag2 <- as.integer(difftime(Train$Registration_Date, Train$Station_End_Date, units = "days"))
+Train$Lag3 <- as.integer(difftime(Train$Registration_Date, Train$First_Interaction, units = "days"))
+
+Test$Lag <- as.integer(difftime(Test$Registration_Date, Test$Station_Start_Date, units = "days"))
+Test$Lag2 <- as.integer(difftime(Test$Registration_Date, Test$Station_End_Date, units = "days"))
+Test$Lag3 <- as.integer(difftime(Test$Registration_Date, Test$First_Interaction, units = "days"))
+
+
+# Assigning probabilities for each Age group
+# ==================================================================================
+install.packages("classInt")
+library(classInt)
+temp <- classIntervals(Train$Age, 10, style = "fixed", fixedBreaks = c(30, 40, 50, 60, 70, 80))
+Train$Age_Bucket <- as.factor(findCols(temp))
+
+temp2 <- classIntervals(Test$Age, 10, style = "fixed", fixedBreaks = c(30, 40, 50, 60, 70, 80))
+Test$Age_Bucket <- as.factor(findCols(temp2))
+
+Age_of <- as.data.frame(Train %>% group_by(Age_Bucket) %>% summarise(Age_of = mean(as.integer(as.character(Y)))))
+
+Train <- left_join(Train, Age_of, by = "Age_Bucket")
+Test <- left_join(Test, Age_of, by = "Age_Bucket")
+
+# Feature Vector
+# ===================================================================================
+Features <- Train[, c("LinkedIn_Shared", "Income", "Education_Score", "Age", "City_Type", "Employer_Category", "Category1", "Category2", "CSD_Mon", "CED_Year", "Camp_Duration", "Reg_Year", "Recency", "Frequency", "Age_of", "Lag", "Lag2", "Lag3", "Y")]
+
+Train_XY <- data.frame(Features)
+Train_XY$Y <- as.factor(Train_XY$Y)
+
+# Feature engineering
+# ==================================================================================
+Cleansing <- function(df)
+{
+  if(length(formals(Cleansing)) != nargs())
+  {
+    stop("Check for missing arguments !!!")
+  }
+  if(is.character(df))
+  {
+    df <- eval(parse(text = df))
+  }
+  if(missing(df) | !is.data.frame(df) )
+  {
+    stop("Enter valid data frame !!!")
+  }
+  
+  df$Station_Start_Date <- as.Date(df$Station_Start_Date, format = "%d-%b-%y")
+  df$CSD_Day <- lubridate::day(df$Station_Start_Date)
+  df$CSD_Mon <- lubridate::month(df$Station_Start_Date)
+  df$CSD_Year <- lubridate::year(df$Station_Start_Date)
+  
+  df$Station_End_Date <- as.Date(df$Station_End_Date, format = "%d-%b-%y")
+  df$CED_Day <- lubridate::day(df$Station_End_Date)
+  df$CED_Mon <- lubridate::month(df$Station_End_Date)
+  df$CED_Year <- lubridate::year(df$Station_End_Date)
+  
+  df$Camp_Duration <- difftime(df$Station_End_Date, df$Station_Start_Date, units = c("days"))
+  df$Camp_Duration <- as.numeric(df$Camp_Duration)
+  
+  df$Registration_Date <- as.Date(df$Registration_Date, format = "%d-%b-%y")
+  if(sum(is.na(df$Registration_Date)) > 0){
+    df$Registration_Date[is.na(df$Registration_Date)] <- df$Station_Start_Date[is.na(df$Registration_Date)] + days(round(df$Camp_Duration[is.na(df$Registration_Date)]/2))
+  }
+  df$Reg_Day <- lubridate::day(df$Registration_Date)
+  df$Reg_Mon <- lubridate::month(df$Registration_Date)
+  df$Reg_Year <- lubridate::year(df$Registration_Date)
+  
+  df$Online_Follower <- as.factor(df$Online_Follower)
+  df$LinkedIn_Shared <- as.factor(df$LinkedIn_Shared)
+  df$Twitter_Shared <- as.factor(df$Twitter_Shared)
+  df$Facebook_Shared <- as.factor(df$Facebook_Shared)
+  
+  levels(df$Income)[levels(df$Income) == "None"] <- 7
+  
+  df$Education_Score <- as.character(df$Education_Score)
+  df$Education_Score[df$Education_Score == "None"] <- 0
+  df$Education_Score <- as.numeric(df$Education_Score)
+  df$Education_Score[df$Education_Score == 0] <- median(df$Education_Score[df$Education_Score != 0])
+  
+  df$Age <- as.character(df$Age)
+  df$Age[df$Age == "None"] <- 0
+  df$Age <- as.numeric(df$Age)
+  df$Age[df$Age == 0] <- median(df$Age[df$Age != 0])
+  
+  df$First_Interaction <- as.Date(df$First_Interaction, format = "%d-%b-%y")
+  df$FI_Day <- lubridate::day(df$First_Interaction)
+  df$FI_Mon <- lubridate::month(df$Registration_Date)
+  # df$FI_Year <- year(df$Registration_Date) # Equals to some other variable (Perfect multi-collinearity)
+  
+  levels(df$City_Type) <- c(1:length(levels(df$City_Type)))
+  
+  levels(df$Employer_Category) <- c(1:length(levels(df$Employer_Category)))
+  
+  levels(df$Category1) <- c(1:length(levels(df$Category1)))
+  
+  levels(df$Category2) <- c(1:length(levels(df$Category2)))
+  
+  df$Reg_Year <- factor(df$Reg_Year, levels = c(2003, 2004, 2005, 2006, 2007))
+  
+  df$CSD_Year <- factor(df$CSD_Year, levels = c(2003, 2004, 2005, 2006, 2007))
+  
+  return(df)
+}
+Train <- Cleansing(Train)
+View(Train)
+Test <- Cleansing(Test)
+
+# Recency & Frequency variables
+# ========================================================================
+tab1 <- rbind(Train[, c("Voter_ID", "Registration_Date")], Test[, c("Voter_ID", "Registration_Date")])
+
+tab2 <- as.data.frame(tab1 %>% group_by(Voter_ID) %>% summarise(PRRD = max(Registration_Date)))
+tab2$Recency <- as.integer(difftime(max(Train$Station_End_Date, Test$Station_End_Date), tab2$PRRD, units = "days"))
+tab2$PRRD <- NULL
+
+
+tab3 <- as.data.frame(table(tab1$Voter_ID))
+colnames(tab3) <- c("Voter_ID", "Frequency")
+tab3$Voter_ID <- as.integer(as.character(tab3$Voter_ID))
+
+Train <- left_join(Train, tab2, by = c("Voter_ID"))
+Train <- left_join(Train, tab3, by = c("Voter_ID"))
+Test <- left_join(Test, tab2, by = c("Voter_ID"))
+Test <- left_join(Test, tab3, by = c("Voter_ID"))
+
+Train$Recency <- as.integer(Train$Recency)
+Test$Recency <- as.integer(Test$Recency)
+
+# Time Difference features
+# =================================================================================
+Train$Lag <- as.integer(difftime(Train$Registration_Date, Train$Station_Start_Date, units = "days"))
+Train$Lag2 <- as.integer(difftime(Train$Registration_Date, Train$Station_End_Date, units = "days"))
+Train$Lag3 <- as.integer(difftime(Train$Registration_Date, Train$First_Interaction, units = "days"))
+
+Test$Lag <- as.integer(difftime(Test$Registration_Date, Test$Station_Start_Date, units = "days"))
+Test$Lag2 <- as.integer(difftime(Test$Registration_Date, Test$Station_End_Date, units = "days"))
+Test$Lag3 <- as.integer(difftime(Test$Registration_Date, Test$First_Interaction, units = "days"))
+
+
+# Assigning probabilities for each Age group
+# ==================================================================================
+install.packages("classInt")
+library(classInt)
+temp <- classIntervals(Train$Age, 10, style = "fixed", fixedBreaks = c(30, 40, 50, 60, 70, 80))
+Train$Age_Bucket <- as.factor(findCols(temp))
+
+temp2 <- classIntervals(Test$Age, 10, style = "fixed", fixedBreaks = c(30, 40, 50, 60, 70, 80))
+Test$Age_Bucket <- as.factor(findCols(temp2))
+
+Age_of <- as.data.frame(Train %>% group_by(Age_Bucket) %>% summarise(Age_of = mean(as.integer(as.character(Y)))))
+
+Train <- left_join(Train, Age_of, by = "Age_Bucket")
+Test <- left_join(Test, Age_of, by = "Age_Bucket")
+
+# Feature Vector
+# ===================================================================================
+Features <- Train[, c("LinkedIn_Shared", "Income", "Education_Score", "Age", "City_Type", "Employer_Category", "Category1", "Category2", "CSD_Mon", "CED_Year", "Camp_Duration", "Reg_Year", "Recency", "Frequency", "Age_of", "Lag", "Lag2", "Lag3", "Y")]
+
+Train_XY <- data.frame(Features)
+Train_XY$Y <- as.factor(Train_XY$Y)
+
